@@ -1,12 +1,15 @@
 const express = require('express')
 const app = express()
 
-//set up view engine
-app.set("view engine", "ejs")
+//middleware to parse JSON bodies
+app.use(express.json());
 
 app.get('/', (req, res) => {
-    console.log('Here')
-    res.redirect('https://bookit-landing.web.app/');
+    res.send("hello")
 })
+
+const appointmentRouter = require('./routes/appointments.js');
+
+app.use('/appointments', appointmentRouter)
 
 app.listen(3000)
