@@ -2,38 +2,18 @@ const stripe = require('../config/stripeClient');
 
 //onboarding users
 const onboardUser = async (req, res) => {
-    const { country, email, businessType, businessWebsite, externalAccount } = req.body;
-
     try {
-        // Create a connected account with valid fields
-        const account = await stripe.accounts.create({
-            country: country || "MY", // Default to Malaysia
-            email, // Add email for the account
-            capabilities: {
-                card_payments: { requested: true }, // Enable card payments
-                transfers: { requested: true }, // Enable transfers
-            },
-            business_type: businessType || "individual", // Specify business type
-            settings: {
-                payouts: {
-                    schedule: {
-                        interval: "daily", // Automatically schedule payouts
-                    },
-                },
-            },
-            external_account: externalAccount, // Attach the external account
-            business_profile: {
-                url: businessWebsite, // Provide a business website
-            },
-        });
+        const { country, email, businessType, businessWebsite, externalAccount } = req.body;
 
-        // Generate an account link for onboarding
-        const accountLink = await stripe.accountLinks.create({
-            account: account.id,
-            refresh_url: "https://example.com/reauth", // URL to redirect if onboarding fails
-            return_url: "https://example.com/return", // URL to redirect after onboarding
-            type: "account_onboarding", // Onboarding link type
-        });
+        if (!country || !email || !externalAccount || !businessType || !businessWebsite) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
+        // Step 1: Create a connected account
+        const account = await createConnectedAccount({ country, email, businessType, businessWebsite, externalAccount });
+
+        // Step 2: Generate onboarding link
+        const accountLink = await generateAccountLink(account.id);
 
         res.status(200).json({
             message: "Connected account created successfully. Complete onboarding.",
@@ -41,14 +21,45 @@ const onboardUser = async (req, res) => {
             accountLink: accountLink.url,
         });
     } catch (error) {
-        console.error(
-            "An error occurred when calling the Stripe API to create an account",
-            error
-        );
+        console.error("Error during onboarding process:", error);
         res.status(500).json({ error: error.message });
     }
 };
 
+//Create a connected account
+const createConnectedAccount = async ({ country, email, businessType, businessWebsite, externalAccount }) => {
+    return await stripe.accounts.create({
+        country: country || "MY",
+        email,
+        capabilities: {
+            card_payments: { requested: true },
+            transfers: { requested: true },
+        },
+        business_type: businessType || "individual",
+        settings: {
+            payouts: {
+                schedule: {
+                    interval: "daily",
+                },
+            },
+        },
+        external_account: externalAccount,
+        business_profile: {
+            url: businessWebsite,
+        },
+    });
+};
+
+//Generate Onboarding Link
+const generateAccountLink = async(accountId) =>{
+    return await stripe.accountLinks.create({
+        account: accountId,
+        refresh_url: "https://example.com/reauth",
+        return_url: "https://example.com/return",
+        type: "account_onboarding",
+    })
+
+}
 
 //Attach a debit card to a connected account
 const attachDebitCard = async (req, res) => {
@@ -145,10 +156,62 @@ const createBankToken = async (req, res) => {
     }
 };
 
+/*Stripe FPX*/
+
+// Handle payments using FPX
+const createPaymentIntentForFPX = async (req, res) => {
+    try {
+        const { amount, currency } = req.body;
+
+        // Create a PaymentIntent with FPX as the payment method
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount, // Amount in cents
+            currency: currency || 'myr', // FPX only supports MYR
+            payment_method_types: ['fpx'], // Specify FPX as the payment method
+        });
+
+        res.status(200).json({
+            message: 'FPX PaymentIntent created successfully',
+            clientSecret: paymentIntent.client_secret,
+            paymentIntentId: paymentIntent.id,
+        });
+    } catch (error) {
+        console.error('Error creating FPX PaymentIntent:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+//Confirm FPX payment programmically (FOR TESTING ONLY)
+const confirmFpxPayment = async (req, res) => {
+    const { paymentIntentId, bank } = req.body;
+
+    try {
+        const paymentIntent = await stripe.paymentIntents.confirm(paymentIntentId, {
+            payment_method_data: {
+                type: 'fpx',
+                fpx: {
+                    bank: bank || 'maybank2u', 
+                },
+            },
+            return_url: 'https://example.com/success', 
+        });
+
+        res.status(200).json({
+            message: 'FPX Payment confirmed successfully',
+            paymentIntent,
+        });
+    } catch (error) {
+        console.error('Error confirming FPX payment:', error.message);
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     onboardUser,
     attachDebitCard,
     createPaymentIntent,
     createPayout,
-    createBankToken
+    createBankToken,
+    createPaymentIntentForFPX,
+    confirmFpxPayment
 }

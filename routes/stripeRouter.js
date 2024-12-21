@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { onboardUser, attachDebitCard, createPaymentIntent, createPayout, createBankToken } = require('../controllers/stripeController.js');
+const { onboardUser, attachDebitCard, createPaymentIntent, createPayout, createBankToken, createPaymentIntentForFPX, confirmFpxPayment } = require('../controllers/stripeController.js');
 
 // Route to onboard a user (create a connected account)
 router.post('/stripe/connect', onboardUser);
@@ -17,4 +17,9 @@ router.post('/stripe/payout', createPayout);
 // Route to generate test bank token
 router.post('/stripe/create-bank-token', createBankToken);
 
+// Route to create a PaymentIntent for FPX
+router.post('/stripe/payment-intent/fpx', createPaymentIntentForFPX);
+
+// Route to confirm FPX payment (TESTING ONLY)
+router.post('/stripe/confirm-payment', confirmFpxPayment);
 module.exports = router;
