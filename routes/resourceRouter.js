@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+const { 
+    getResource, 
+    getResourceScheduleBlocks, 
+    createRecurringScheduleForResource, 
+    createScheduleBlockForRecurringSchdule,
+    getScheduleForResource,
+    getBookableSlots 
+} = require('../controllers/resourceController');
+
+router.get('/resources', getResource);
+router.get('/resources/:resourceId/schedule-blocks', getResourceScheduleBlocks);
+router.post('/resources/:resourceId/recurring-schedules', createRecurringScheduleForResource);
+router.post('/resources/:resourceId/recurring-schedules/:recurringScheduleId/schedule-blocks', createScheduleBlockForRecurringSchdule);
+router.get('/resources/:resourceId/schedule', getScheduleForResource);
+
+module.exports = router;
