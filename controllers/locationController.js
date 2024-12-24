@@ -1,5 +1,5 @@
 const hapioClient = require('../config/hapioClient');
-
+const connection = require('../connection');
 //get locations
 const getLocations = async (req, res) => {
     try{
@@ -31,6 +31,9 @@ const createLocation = async (req, res) =>{
 
         //Send the response back to the frontend
         res.send(response.data);
+
+        //After creating a location, use the id to create an location entry in the database.
+    
 
     }catch(error){
         console.error("Error creating resources", error.message);
