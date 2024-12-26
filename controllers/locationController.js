@@ -61,6 +61,7 @@ const createLocation = async (req, res) =>{
 
         const response = await hapioClient.post('locations', apiData);
 
+        //get location_id from response.data
         const { id: location_id } = response.data;
 
         connection.query('INSERT INTO locations (location_id, user_id, name, address, postal_code, timezone) VALUES (?, ?, ?, ?, ?, ?)',
@@ -87,7 +88,37 @@ const createLocation = async (req, res) =>{
         )
 
     }catch(error){
-        console.error("Error creating resources", error.message);
+        console.error("Error creating location", error.message);
+        //handle errors from Hapio API
+        if(error.message){
+            res.status(error.response.status).json(error.response.data);
+        } 
+        else {
+            res.status(500).json({ error : 'Internal server error' });
+        }
+    }
+}
+//Delete a location
+const removeLocation = async (req, res) =>{
+    const { location_id } = req.params;
+    try{
+        const response = hapioClient.delete(`locations/${location_id}`);
+        console.log("Hapio remove location successful");
+        //remove the location from mysql
+        connection.query('DELETE FROM locations WHERE location_id = ?',
+            [location_id],
+            (err, result) =>{
+                if(err){
+                    console.log("Error removing entry", err.message);
+
+                    res.status(500).json({ message : "Error removing entry from MySQL" });
+                }
+                console.log("DELETE location successful", result);
+                res.status(201).json({ message : "Location entry removal successful" });
+            }
+        )
+    } catch(err){
+        console.error("Error removing location", error.message);
         //handle errors from Hapio API
         if(error.message){
             res.status(error.response.status).json(error.response.data);
@@ -100,5 +131,6 @@ const createLocation = async (req, res) =>{
 module.exports = {
     getLocations,
     createLocation,
-    getSpecificLocation
+    getSpecificLocation,
+    removeLocation
 }

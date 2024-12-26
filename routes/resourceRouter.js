@@ -6,7 +6,8 @@ const {
     createRecurringScheduleForResource, 
     createScheduleBlockForRecurringSchdule,
     getScheduleForResource,
-    getBookableSlots 
+    createResource,
+    removeResource
 } = require('../controllers/resourceController');
 
 router.get('/resources', getResource);
@@ -14,5 +15,8 @@ router.get('/resources/:resourceId/schedule-blocks', getResourceScheduleBlocks);
 router.post('/resources/:resourceId/recurring-schedules', createRecurringScheduleForResource);
 router.post('/resources/:resourceId/recurring-schedules/:recurringScheduleId/schedule-blocks', createScheduleBlockForRecurringSchdule);
 router.get('/resources/:resourceId/schedule', getScheduleForResource);
+router.post('/resources/:resourceId');
+router.post('/resources', createResource);
+router.delete('/resources/:resourceId', removeResource);
 
 module.exports = router;

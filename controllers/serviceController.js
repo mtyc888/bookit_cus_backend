@@ -2,41 +2,75 @@ const hapioClient = require('../config/hapioClient');
 const dayjs = require('dayjs');
 const timezone = require('dayjs/plugin/timezone');
 const utc = require('dayjs/plugin/utc');
-
+const connection = require('../connection');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-// Delete a service
-const deleteService = async (req, res) => {
-    //extract serviceId from URL parameters
-    const { serviceId } = req.params;
-    try{
-        //Make the delete request to Hapio API
-        const response = await hapioClient.delete(`services/${serviceId}`);
-
-        //Send the response to the frontend
-        res.status(response.status).json(response.data);
-    } catch (error){
-        console.log("Error creating resource", error.message);
-
-        //handle errors from Hapio API
-        if(error.message){
-            res.status(error.response.status).json(error.response.data);
-        }else{
-            res.status(500).json({ error : "Internal server error" });
-        }
-    }
-}
 // Create a service
 const createService = async (req, res) => {
     try {
-        const resourceData = req.body; // Extract data from the request body
+        const {
+            name,
+            price,
+            type,
+            duration,
+            bookable_interval,
+            buffer_time_before,
+            buffer_time_after,
+            booking_window_start,
+            booking_window_end,
+            cancelation_threshold,
+            metadata,
+            protected_metadata,
+            enabled
+        } = req.body;
 
         // Send POST request to the Hapio API
-        const response = await hapioClient.post('services', resourceData);
+        const response = await hapioClient.post('services', {
+            name,
+            price,
+            type,
+            duration,
+            bookable_interval,
+            buffer_time_before,
+            buffer_time_after,
+            booking_window_start,
+            booking_window_end,
+            cancelation_threshold,
+            metadata,
+            protected_metadata,
+            enabled
+        });
 
-        // Send the response back to the frontend
-        res.status(201).json(response.data);
+        const { 
+            id:service_id,
+            created_at: created_at,
+            updated_at: updated_at, 
+        } = response.data;
+
+        //create service entry in mysql
+        connection.query('INSERT INTO services (service_id, name, price, type, duration, created_at, updated_at, bookable_interval, buffer_time_before, buffer_time_after, booking_window_start, booking_window_end, cancelation_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [service_id, name, price, type, duration, created_at, updated_at, bookable_interval,buffer_time_before, buffer_time_after, booking_window_start, booking_window_end, cancelation_threshold],
+            (err, result) => {
+                if(err){
+                    console.log("Error inserting service into services table:", err.message);
+                    res.status(500).json({ message: "Database insertion fail" })
+                }
+                console.log('Service entry successfully inserted into database:', result);
+                res.status(201).json({
+                    message: "Service insertion successful",
+                    service: {
+                        service_id, 
+                        name,
+                        price,
+                        type,
+                        duration,
+                        created_at,
+                        updated_at
+                    }
+                })
+            }
+        )
     } catch (error) {
         console.error('Error creating service:', error.message);
 
@@ -45,6 +79,41 @@ const createService = async (req, res) => {
             res.status(error.response.status).json(error.response.data);
         } else {
             res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+};
+//remove a service
+// Delete a service
+const removeService = async (req, res) => {
+    const { service_id } = req.params;
+
+    try {
+        // Step 1: Delete from Hapio API
+        const response = await hapioClient.delete(`services/${service_id}`);
+        console.log("Hapio remove service successful");
+
+        // Step 2: Remove the service from MySQL
+        connection.query(
+            'DELETE FROM services WHERE service_id = ?',
+            [service_id],
+            (err, result) => {
+                if (err) {
+                    console.log("Error removing service from MySQL:", err.message);
+                    return res.status(500).json({ message: "Error removing service from MySQL" });
+                }
+
+                console.log("DELETE service successful in MySQL:", result);
+                res.status(201).json({ message: "Service removal successful" });
+            }
+        );
+    } catch (err) {
+        console.error("Error removing service:", err.message);
+
+        // Handle errors from Hapio API
+        if (err.response) {
+            res.status(err.response.status).json(err.response.data);
+        } else {
+            res.status(500).json({ error: "Internal server error" });
         }
     }
 };
@@ -149,7 +218,7 @@ const getBookableSlots = async(req, res) =>{
 module.exports = {
     createService,
     getAllService,
-    deleteService,
     assignResourceToService,
-    getBookableSlots
+    getBookableSlots,
+    removeService
 };

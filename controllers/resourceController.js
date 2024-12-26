@@ -1,5 +1,5 @@
 const hapioClient = require('../config/hapioClient');
-
+const connection = require('../connection');
 //Get all resources
 const getResource = async(req, res) =>{
     try{
@@ -142,13 +142,114 @@ const getScheduleForResource = async(req, res) =>{
         } else {
             res.status(500).json({ error: 'Internal server error' });
         }
+    } 
+}
+//Add a resource
+const createResource = async(req, res) =>{
+    try{
+        const { 
+            name,
+            max_simultaneous_bookings,
+            metadata,
+            protected_metadata,
+            enabled,
+            user_id,
+            identification_no,
+            email,
+            phone_no
+        } = req.body;
+
+        const apiData = {
+            name,
+            max_simultaneous_bookings,
+            metadata,
+            protected_metadata,
+            enabled
+        }
+
+        const response = await hapioClient.post(`resources`, apiData);
+
+        const {
+            id: resource_id,
+            created_at: created_at
+        } = response.data;
+
+        //mysql query to add resource into resources table
+        connection.query('INSERT INTO resource (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES ( ?, ?, ?, ?, ?, ?, ?)',
+            [resource_id, user_id, name, identification_no, email, phone_no, created_at],
+            (err, result) =>{
+                if(err){
+                    console.log("Error inserting resource into resources table");
+                    return res.status(500).json({ message :  "Error inserting data into resource table"})
+                }
+                console.log("Successfully inserted into resources: ", result);
+                res.status(201).json({
+                    message : "Successfully inserted resource into mysql",
+                    resource: {
+                        name, 
+                        user_id,
+                        resource_id,
+                        email,
+                        phone_no,
+                        created_at,
+                        identification_no
+                    }
+                })
+            }
+        )
+
+    }catch(error){
+        console.error('Error getting schedule for a resource:', error.message);
+
+        if (error.response) {
+            res.status(error.response.status).json(error.response.data);
+        } else {
+            res.status(500).json({ error: 'Internal server error' });
+        }
     }
 }
+//remove a resource
+const removeResource = async(req, res) => {
+    try{
+        const { resourceId } = req.params;
+        const response = await hapioClient.delete(`resources/${resourceId}`);
+        if(response.status == 200){
+            console.log("Successfully removed resource from Hapio")
+        }
+        //remove from mysql
+        connection.query('DELETE FROM resource WHERE resource_id = ?', 
+            [resourceId],
+            (err, result) => {
+                if(err){
+                    console.log("Error removing resource from resource table: ", err.message);
+                    return res.status(500).json({message:"Error removing resource from resource table"})
+                }
+                console.log("Successfully added resource into resource table", result);
+                res.status(201).json({
+                    message:"resource removed:",
+                    resource:{
+                        resourceId
+                    }
+                })
+            }
+        )
 
+    }catch(error){
+        console.error('Error removing resource:', error.message);
+
+        if (error.response) {
+            res.status(error.response.status).json(error.response.data);
+        } else {
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+}
 module.exports = {
     getResource,
     getResourceScheduleBlocks,
     createRecurringScheduleForResource,
     createScheduleBlockForRecurringSchdule,
-    getScheduleForResource
+    getScheduleForResource,
+    createResource,
+    removeResource
 }
