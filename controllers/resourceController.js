@@ -145,8 +145,8 @@ const getScheduleForResource = async(req, res) =>{
     } 
 }
 //Add a resource
-const createResource = async(req, res) =>{
-    try{
+const createResource = async (req, res) => {
+    try {
         const { 
             name,
             max_simultaneous_bookings,
@@ -159,62 +159,86 @@ const createResource = async(req, res) =>{
             phone_no
         } = req.body;
 
+        // Validate payload
+        if (!name || typeof name !== 'string' || name.length < 1 || name.length > 100) {
+            return res.status(400).json({ message: "Invalid 'name'. Must be a string between 1 and 100 characters." });
+        }
+        if (max_simultaneous_bookings !== null && (typeof max_simultaneous_bookings !== 'number' || max_simultaneous_bookings < 1)) {
+            return res.status(400).json({ message: "Invalid 'max_simultaneous_bookings'. Must be a number >= 1 or null." });
+        }
+        if (enabled !== undefined && typeof enabled !== 'boolean') {
+            return res.status(400).json({ message: "Invalid 'enabled'. Must be a boolean." });
+        }
+
+        // Prepare API payload
         const apiData = {
             name,
             max_simultaneous_bookings,
             metadata,
             protected_metadata,
             enabled
-        }
+        };
 
+        console.log('Sending API Data:', apiData);
+
+        // Send POST request to Hapio API
         const response = await hapioClient.post(`resources`, apiData);
 
-        const {
-            id: resource_id,
-            created_at: created_at
-        } = response.data;
+        if (response.status !== 201) {
+            console.error('Error creating resource:', response.data);
+            return res.status(500).json({ message: "Error creating resource", details: response.data });
+        }
 
-        //mysql query to add resource into resources table
-        connection.query('INSERT INTO resource (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES ( ?, ?, ?, ?, ?, ?, ?)',
+        console.log('Resource Created Successfully:', response.data);
+
+        const { id: resource_id, created_at } = response.data;
+
+        // Insert resource into MySQL
+        connection.query(
+            'INSERT INTO resource (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [resource_id, user_id, name, identification_no, email, phone_no, created_at],
-            (err, result) =>{
-                if(err){
-                    console.log("Error inserting resource into resources table");
-                    return res.status(500).json({ message :  "Error inserting data into resource table"})
+            (err, result) => {
+                if (err) {
+                    console.error('Error inserting resource into MySQL:', err.message);
+                    return res.status(500).json({ message: "Error inserting resource into MySQL" });
                 }
-                console.log("Successfully inserted into resources: ", result);
+
+                console.log('Resource Inserted into MySQL:', result);
                 res.status(201).json({
-                    message : "Successfully inserted resource into mysql",
+                    message: "Resource successfully created and inserted into MySQL",
                     resource: {
-                        name, 
-                        user_id,
                         resource_id,
+                        name,
+                        user_id,
                         email,
                         phone_no,
                         created_at,
                         identification_no
                     }
-                })
+                });
             }
-        )
-
-    }catch(error){
-        console.error('Error getting schedule for a resource:', error.message);
+        );
+    } catch (error) {
+        console.error('Error creating resource:', error.message);
 
         if (error.response) {
             res.status(error.response.status).json(error.response.data);
         } else {
-            res.status(500).json({ error: 'Internal server error' });
+            res.status(500).json({ message: 'Internal server error' });
         }
     }
-}
+};
+
 //remove a resource
 const removeResource = async(req, res) => {
     try{
         const { resourceId } = req.params;
         const response = await hapioClient.delete(`resources/${resourceId}`);
-        if(response.status == 200){
+        if(response.status == 204){
             console.log("Successfully removed resource from Hapio")
+        }else{
+            console.log("Error removing resource", response.data);
+            return res.status(response.status).json({message:"Error removing resource"})
         }
         //remove from mysql
         connection.query('DELETE FROM resource WHERE resource_id = ?', 

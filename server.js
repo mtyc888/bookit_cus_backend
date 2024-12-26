@@ -7,6 +7,7 @@ const locationRoutes = require('./routes/locationRoutes.js')
 const resourceRoutes = require('./routes/resourceRouter.js')
 const stripeRoutes = require('./routes/stripeRouter.js')
 const notificationRoutes = require('./routes/notificationRoutes.js')
+const bookingRoutes = require('./routes/bookingRoutes.js')
 //load the .env file
 require('dotenv').config();
 //allow requests from any origin
@@ -29,5 +30,6 @@ app.use('', serviceRoutes);
 app.use('', locationRoutes);
 app.use('',resourceRoutes);
 app.use('', stripeRoutes);
-app.use('', notificationRoutes)
+app.use('', notificationRoutes);
+app.use('',bookingRoutes);
 app.listen(3001)

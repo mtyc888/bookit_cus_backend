@@ -1,8 +1,54 @@
 const hapioClient = require('../config/hapioClient');
+const connection = require('../connection');
+const { DateTime, Duration } = require('luxon');
+const dayjs = require('dayjs');
+const utc = require('dayjs/plugin/utc');
+const timezone = require('dayjs/plugin/timezone');
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 
 //create booking, takes in location_id, service_id, starts_at, ends_at
-const createBooking = async(req, res) =>{
-    const { location_id, service_id, starts_at, ends_at } = req.body;
+const createBooking = async (req, res) => {
+    const {
+        location_id,
+        service_id,
+        resource_id,
+        price,
+        metadata,
+        protected_metadata,
+        is_temporary,
+        is_cancelled,
+        starts_at,
+        ends_at,
+        ignore_schedule,
+        ignore_fully_booked,
+        ignore_bookable_slots,
+        customer_name,
+        customer_email,
+        customer_phone,
+        status,
+        payment_status,
+        user_id,
+    } = req.body;
+
+    const apiData = {
+        location_id,
+        service_id,
+        resource_id,
+        price,
+        metadata,
+        protected_metadata,
+        is_temporary,
+        is_cancelled,
+        starts_at,
+        ends_at,
+        ignore_schedule,
+        ignore_fully_booked,
+        ignore_bookable_slots,
+    };
+
     console.log('Raw starts_at:', starts_at);
     console.log('Raw ends_at:', ends_at);
 
@@ -26,6 +72,8 @@ const createBooking = async(req, res) =>{
 
     console.log('Formatted starts_at:', formatted_starts_at);
     console.log('Formatted ends_at:', formatted_ends_at);
+    apiData.starts_at = formatted_starts_at;
+    apiData.ends_at = formatted_ends_at;
 
     // Ensure ends_at is after starts_at
     if (new Date(formatted_ends_at) <= new Date(formatted_starts_at)) {
@@ -36,25 +84,76 @@ const createBooking = async(req, res) =>{
 
     try {
         // Make POST request to Hapio API
-        const response = await hapioClient.post(`bookings`, {
-            service_id, // API-expected field name
-            location_id, // API-expected field name
-            starts_at: formatted_starts_at,
-            ends_at: formatted_ends_at,
-        });
+        const response = await hapioClient.post(`bookings`, apiData);
 
-        // Send response back to client
-        res.status(response.status).json(response.data);
+        const {
+            id: appointment_id,
+            created_at,
+            updated_at,
+        } = response.data;
+
+        // Convert ISO strings to DateTime objects
+        const startTime = DateTime.fromISO(formatted_starts_at);
+        const endTime = DateTime.fromISO(formatted_ends_at);
+
+        // Format the timestamps
+        const appointment_time = startTime.toFormat('yyyy-MM-dd HH:mm:ss');
+        const appointment_date = startTime.toFormat('yyyy-MM-dd');
+        const appointment_time_end = endTime.toFormat('yyyy-MM-dd HH:mm:ss');
+
+        // Insert into MySQL
+        connection.query(
+            'INSERT INTO appointments (appointment_id, user_id, service_id, resource_id, location_id, customer_name, customer_email, customer_phone, appointment_date, appointment_time, appointment_time_end, status, payment_status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            [
+                appointment_id,
+                user_id,
+                service_id,
+                resource_id,
+                location_id,
+                customer_name,
+                customer_email,
+                customer_phone,
+                appointment_date,
+                appointment_time,
+                appointment_time_end,
+                status,
+                payment_status,
+                created_at,
+                updated_at,
+            ],
+            (err, result) => {
+                if (err) {
+                    console.error('Error inserting new appointment into appointment table:', err.message);
+                    return res.status(500).json({ message: 'Error inserting booking into MySQL' });
+                }
+
+                console.log('Successfully inserted into the appointments table:', result);
+                return res.status(201).json({
+                    message: 'Insertion into appointments table successful',
+                    appointment: {
+                        appointment_id,
+                        user_id,
+                        service_id,
+                        resource_id,
+                        location_id,
+                        appointment_date,
+                        appointment_time,
+                        appointment_time_end,
+                    },
+                });
+            }
+        );
     } catch (error) {
         console.error('Error booking the slot:', error.message);
 
         if (error.response) {
-            res.status(error.response.status).json(error.response.data);
+            return res.status(error.response.status).json(error.response.data);
         } else {
-            res.status(500).json({ error: 'Internal server error' });
+            return res.status(500).json({ error: 'Internal server error' });
         }
     }
-}
+};
+
 
 module.exports = {
     createBooking
