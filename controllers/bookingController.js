@@ -154,7 +154,86 @@ const createBooking = async (req, res) => {
     }
 };
 
+//get all bookings
+const getBooking = async (req, res) => {
+    try {
+        const response = await hapioClient.get('bookings', {
+            params: {
+                page: 1,
+                per_page: 100,
+                from: "2020-01-01T00:00:00+08:00", // Earliest date
+                to: "2025-12-31T23:59:59+08:00",   // Latest date
+            },
+        });
+
+        // Log full response for debugging
+        console.log(response.data);
+
+        res.send(response.data); // Send response to client
+    } catch (error) {
+        console.error('Error getting bookings:', error.message);
+
+        if (error.response) {
+            return res.status(error.response.status).json(error.response.data);
+        } else {
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+};
+
+//retrieve a booking
+const getSpecificBooking = async(req, res) =>{
+    try{
+        const { bookingId } = req.params;
+        const response = await hapioClient.get(`bookings/${bookingId}`);
+        res.send(response.data);
+    } catch(error){
+        console.error('Error getting specific booking:', error.message);
+
+        if (error.response) {
+            return res.status(error.response.status).json(error.response.data);
+        } else {
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+}
+
+//remove a booking
+const removeBooking = async (req, res) =>{
+    try{
+        const { bookingId } = req.params;
+        const response = await hapioClient.delete(`bookings/${bookingId}`);
+        //remove from mysql
+        connection.query('DELETE FROM appointments WHERE appointment_id = ?',
+        [bookingId], 
+        (err, result)=>{
+            if(err){
+                console.log("Error removing booking from mysql: ", err.message);
+                return res.status(500).json({message:"remove from mysql error"});
+            }
+            console.log("Successfully removed from mysql", result);
+            res.status(201).json({
+                message: "Successfully removed from mysql table",
+                booking:{
+                    bookingId
+                }
+            })
+
+        })
+    }catch(error){
+        console.error('Error removing specific booking:', error.message);
+
+        if (error.response) {
+            return res.status(error.response.status).json(error.response.data);
+        } else {
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+}
 
 module.exports = {
-    createBooking
+    createBooking,
+    getBooking,
+    getSpecificBooking,
+    removeBooking
 }
