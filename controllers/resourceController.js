@@ -201,7 +201,7 @@ const createResource = async (req, res) => {
 
         // Insert resource into MySQL
         connection.query(
-            'INSERT INTO resource (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO resources (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [resource_id, user_id, name, identification_no, email, phone_no, created_at],
             (err, result) => {
                 if (err) {
@@ -247,7 +247,7 @@ const removeResource = async(req, res) => {
             return res.status(response.status).json({message:"Error removing resource"})
         }
         //remove from mysql
-        connection.query('DELETE FROM resource WHERE resource_id = ?', 
+        connection.query('DELETE FROM resources WHERE resource_id = ?', 
             [resourceId],
             (err, result) => {
                 if(err){

@@ -155,7 +155,7 @@ const assignResourceToService = async (req, res) => {
 // Get all bookable slots
 const getBookableSlots = async(req, res) =>{
     const { serviceId } = req.params;
-    let { from, to, location } = req.query;
+    let { from, to, location } = req.body;
 
     // Log raw values
     console.log('Raw from:', from);
