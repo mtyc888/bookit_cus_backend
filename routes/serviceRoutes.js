@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { createService, getAllService, assignResourceToService, getBookableSlots, removeService } = require('../controllers/serviceController');
 
-router.get('/services', getAllService);
+router.get('/services/:user_id', getAllService);
 router.post('/services', createService);
 router.put('/services/:serviceId/resources/:resourceId', assignResourceToService);
 router.get('/services/:serviceId/bookable-slots', getBookableSlots);

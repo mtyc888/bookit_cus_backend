@@ -3,10 +3,15 @@ const connection = require('../connection');
 //get locations
 const getLocations = async (req, res) => {
     try{
-        //Send GET request to Hapio API
-        const response = await hapioClient.get('locations');
-        //Send the response to the frontend
-        res.send(response.data);
+        const { user_id } = req.params;
+        connection.query('SELECT * FROM locations WHERE user_id = ?',[user_id], (err, result) =>{
+            if(err){
+                console.error("Error fetching locations from database", err.message);
+                res.status(500).json({message:"Error fetching locations"})
+            }
+            console.log("locations successfully fetched", result)
+            res.json({ data: result })
+        })
 
     }catch(error){
         console.error("Error fetching locations", error.message);

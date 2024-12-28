@@ -9,10 +9,15 @@ dayjs.extend(timezone);
 //Get all resources
 const getResource = async(req, res) =>{
     try{
-        //Make a GET request
-        const response = await hapioClient.get('resources');
-        //Send the response back to the frontend
-        res.send(response.data)
+        const { user_id } = req.params;
+        connection.query('SELECT * FROM resources WHERE user_id = ?', [user_id], (err, result) => {
+            if(err){
+                console.error("Error fetching resources from mysql", err.message);
+                res.status(500).json({message:"error fetching resource from mysql"})
+            }
+            console.log("Successful fetching resources", result);
+            res.json({data:result});
+        })
     } catch(error){
         console.error("Error fetching data", error.message)
         res.status(500).json({ error : "Failed to fetch hapio data" })
