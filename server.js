@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
+
 const connection = require('./connection.js')
 const serviceRoutes = require('./routes/serviceRoutes.js')
 const locationRoutes = require('./routes/locationRoutes.js')
@@ -34,6 +35,9 @@ connection.query('SELECT * FROM users', (err, result) => {
         console.log("Results:", result)
     }
 });
+
+//rate limiting malware
+
 
 // API endpoint to fetch business by slug
 app.get('/api/business/:id', (req, res) => {
