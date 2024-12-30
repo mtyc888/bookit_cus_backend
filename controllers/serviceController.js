@@ -4,6 +4,8 @@ const timezone = require('dayjs/plugin/timezone');
 const utc = require('dayjs/plugin/utc');
 const connection = require('../connection');
 
+const NodeCache = require('node-cache');
+const cache = new NodeCache({ stdTTL: 300 });
 dayjs.extend(utc);
 dayjs.extend(timezone);
 // Create a service
@@ -161,7 +163,7 @@ const assignResourceToService = async (req, res) => {
 // Get all bookable slots
 const getBookableSlots = async(req, res) =>{
     const { serviceId } = req.params;
-    let { from, to, location } = req.body;
+    let { from, to, location } = req.query;
 
     // Log raw values
     console.log('Raw from:', from);
@@ -198,7 +200,11 @@ const getBookableSlots = async(req, res) =>{
             error: '`to` must be a date after `from`.',
         });
     }
-
+    const cacheKey = `${serviceId}-${from}-${to}-${location}`;
+    if(cache.has(cacheKey)){
+        console.log('Serving from cache', cacheKey);
+        return res.json(cache.get(cacheKey));
+    }
     try {
         // Make the GET request to Hapio API
         const response = await hapioClient.get(`services/${serviceId}/bookable-slots`, {
@@ -208,7 +214,8 @@ const getBookableSlots = async(req, res) =>{
                 location,
             },
         });
-
+        //cache the response
+        cache.set(cacheKey, response.data);
         // Send the API response back to the client
         res.status(response.status).json(response.data);
     } catch (error) {
