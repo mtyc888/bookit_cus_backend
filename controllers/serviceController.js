@@ -4,6 +4,8 @@ const timezone = require('dayjs/plugin/timezone');
 const utc = require('dayjs/plugin/utc');
 const connection = require('../connection');
 
+const NodeCache = require('node-cache');
+const cache = new NodeCache({ stdTTL: 300 });
 dayjs.extend(utc);
 dayjs.extend(timezone);
 // Create a service
@@ -83,7 +85,6 @@ const createService = async (req, res) => {
     }
 };
 //remove a service
-// Delete a service
 const removeService = async (req, res) => {
     const { service_id } = req.params;
 
@@ -119,17 +120,24 @@ const removeService = async (req, res) => {
 };
 
 //Get all services
-const getAllService = async(req, res) => {
-    try{
-        //Make a GET request
-        const response = await hapioClient.get('services');
-        //Send the response back to the frontend
-        res.send(response.data)
-    } catch(error){
-        console.error("Error fetching data", error.message)
-        res.status(500).json({ error : "Failed to fetch hapio data" })
+const getAllService = async (req, res) => {
+    try {
+        const user_id = req.params;
+        const query = `SELECT * FROM services WHERE user_id = ?`;
+
+        connection.query(query, [user_id], (err, result) => {
+            if (err) {
+                console.error("Error fetching services from database:", err.message);
+                return res.status(500).json({ error: "Failed to fetch services" });
+            }
+            // Send the filtered results as JSON to the frontend
+            res.json({ data: result });
+        });
+    } catch (error) {
+        console.error("Error fetching data:", error.message);
+        res.status(500).json({ error: "Failed to fetch services from MySQL" });
     }
-}
+};
 
 //PUT Route to associate resource (practitioner) with service
 const assignResourceToService = async (req, res) => {
@@ -192,7 +200,11 @@ const getBookableSlots = async(req, res) =>{
             error: '`to` must be a date after `from`.',
         });
     }
-
+    const cacheKey = `${serviceId}-${from}-${to}-${location}`;
+    if(cache.has(cacheKey)){
+        console.log('Serving from cache', cacheKey);
+        return res.json(cache.get(cacheKey));
+    }
     try {
         // Make the GET request to Hapio API
         const response = await hapioClient.get(`services/${serviceId}/bookable-slots`, {
@@ -202,7 +214,8 @@ const getBookableSlots = async(req, res) =>{
                 location,
             },
         });
-
+        //cache the response
+        cache.set(cacheKey, response.data);
         // Send the API response back to the client
         res.status(response.status).json(response.data);
     } catch (error) {

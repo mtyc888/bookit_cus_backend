@@ -16,15 +16,8 @@ const createBooking = async (req, res) => {
         service_id,
         resource_id,
         price,
-        metadata,
-        protected_metadata,
-        is_temporary,
-        is_cancelled,
         starts_at,
         ends_at,
-        ignore_schedule,
-        ignore_fully_booked,
-        ignore_bookable_slots,
         customer_name,
         customer_email,
         customer_phone,
@@ -38,15 +31,8 @@ const createBooking = async (req, res) => {
         service_id,
         resource_id,
         price,
-        metadata,
-        protected_metadata,
-        is_temporary,
-        is_cancelled,
         starts_at,
         ends_at,
-        ignore_schedule,
-        ignore_fully_booked,
-        ignore_bookable_slots,
     };
 
     console.log('Raw starts_at:', starts_at);
@@ -157,12 +143,13 @@ const createBooking = async (req, res) => {
 //get all bookings
 const getBooking = async (req, res) => {
     try {
+        const { to,from } = req.params;
         const response = await hapioClient.get('bookings', {
             params: {
                 page: 1,
                 per_page: 100,
-                from: "2020-01-01T00:00:00+08:00", // Earliest date
-                to: "2025-12-31T23:59:59+08:00",   // Latest date
+                from,
+                to,
             },
         });
 

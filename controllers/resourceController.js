@@ -9,10 +9,15 @@ dayjs.extend(timezone);
 //Get all resources
 const getResource = async(req, res) =>{
     try{
-        //Make a GET request
-        const response = await hapioClient.get('resources');
-        //Send the response back to the frontend
-        res.send(response.data)
+        const { user_id } = req.params;
+        connection.query('SELECT * FROM resources WHERE user_id = ?', [user_id], (err, result) => {
+            if(err){
+                console.error("Error fetching resources from mysql", err.message);
+                res.status(500).json({message:"error fetching resource from mysql"})
+            }
+            console.log("Successful fetching resources", result);
+            res.json({data:result});
+        })
     } catch(error){
         console.error("Error fetching data", error.message)
         res.status(500).json({ error : "Failed to fetch hapio data" })
@@ -201,7 +206,7 @@ const createResource = async (req, res) => {
 
         // Insert resource into MySQL
         connection.query(
-            'INSERT INTO resource (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO resources (resource_id, user_id, name, identification_no, email, phone_no, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [resource_id, user_id, name, identification_no, email, phone_no, created_at],
             (err, result) => {
                 if (err) {
@@ -247,7 +252,7 @@ const removeResource = async(req, res) => {
             return res.status(response.status).json({message:"Error removing resource"})
         }
         //remove from mysql
-        connection.query('DELETE FROM resource WHERE resource_id = ?', 
+        connection.query('DELETE FROM resources WHERE resource_id = ?', 
             [resourceId],
             (err, result) => {
                 if(err){
