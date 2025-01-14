@@ -230,10 +230,65 @@ const removeBooking = async (req, res) =>{
         }
     }
 }
+//patch a booking (reschedule)
+const rescheduleBooking = async(req, res) => {
+    try {
+        const { bookingId } = req.params;
+        const { starts_at, ends_at } = req.body;
+        
+        // Initialize errors object
+        const errors = {};
 
+        // Validate date formats
+        if (!dayjs(starts_at).isValid() || !dayjs(ends_at).isValid()) {
+            return res.status(400).json({
+                error: 'Invalid date format. Dates must be in ISO 8601 format: Y-m-d\\TH:i:s±HH:mm'
+            });
+        }
+
+        // Check that ends_at is after starts_at
+        if (new Date(ends_at) <= new Date(starts_at)) {
+            errors.ends_at = ['ends_at time must be after starts_at time'];
+        }
+
+        // If there are validation errors, return them
+        if (Object.keys(errors).length > 0) {
+            return res.status(422).json({
+                message: "given data was invalid",
+                errors
+            });
+        }
+
+        // Check if booking exists
+        const booking = await hapioClient.get(`bookings/${bookingId}`);
+        if (!booking) {
+            return res.status(404).json({
+                message: 'The booking was not found.'
+            });
+        }
+
+        // Update the booking
+        const updateData = {
+            starts_at,
+            ends_at
+        };
+
+        const response = await hapioClient.patch(`bookings/${bookingId}`, updateData);
+        res.status(response.status).json(response.data);
+
+    } catch (error) {
+        console.error("Error rescheduling specific booking:", error.message);
+        if (error.response) {
+            return res.status(error.response.status).json(error.response.data);
+        } else {
+            return res.status(500).json({ error: 'Internal server error' });
+        }
+    }
+}
 module.exports = {
     createBooking,
     getBooking,
     getSpecificBooking,
-    removeBooking
+    removeBooking,
+    rescheduleBooking
 }
