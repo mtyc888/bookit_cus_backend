@@ -1,49 +1,39 @@
-const express = require('express')
-const app = express()
-const cors = require('cors')
+const express = require('express');
+const app = express();
+const cors = require('cors');
+const connection = require('./connection.js');
+const serviceRoutes = require('./routes/serviceRoutes.js');
+const locationRoutes = require('./routes/locationRoutes.js');
+const resourceRoutes = require('./routes/resourceRouter.js');
+const stripeRoutes = require('./routes/stripeRouter.js');
+const notificationRoutes = require('./routes/notificationRoutes.js');
+const bookingRoutes = require('./routes/bookingRoutes.js');
 
-const connection = require('./connection.js')
-const serviceRoutes = require('./routes/serviceRoutes.js')
-const locationRoutes = require('./routes/locationRoutes.js')
-const resourceRoutes = require('./routes/resourceRouter.js')
-const stripeRoutes = require('./routes/stripeRouter.js')
-const notificationRoutes = require('./routes/notificationRoutes.js')
-const bookingRoutes = require('./routes/bookingRoutes.js')
-//load the .env file
+// Load the .env file
 require('dotenv').config();
-//allow requests from any origin
-app.use(cors());
-//middleware to parse JSON bodies
-app.use(express.json());
 
-
-// Allow requests from Next.js (localhost:3000)
+// CORS configuration - use only one configuration
 app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE']
 }));
 
+// Middleware to parse JSON bodies
+app.use(express.json());
 
+// Basic routes should come before other route handlers
 app.get('/', (req, res) => {
-    res.send({message : "hello, this is bookit backend"})
-})
-//Test MySQL Query
-connection.query('SELECT * FROM users', (err, result) => {
-    if(err){
-        console.error("Error fetching users", err);
-    }else{
-        console.log("Results:", result)
-    }
+    res.json({ message: "hello, this is bookit backend" });
 });
 
-//rate limiting malware
-
+app.get('/test', (req, res) => {
+    res.json({ message: "hello, this is bookit backend test route" });
+});
 
 // API endpoint to fetch business by slug
 app.get('/api/business/:id', (req, res) => {
     const userId = req.params.id;
 
-    // Query the database to fetch business info by user_id
     const query = `
         SELECT user_id, name, email
         FROM users
@@ -60,7 +50,6 @@ app.get('/api/business/:id', (req, res) => {
             return res.status(404).json({ error: 'Business not found' });
         }
 
-        // Prepare response
         const business = {
             id: result[0].user_id,
             name: result[0].name,
@@ -71,11 +60,31 @@ app.get('/api/business/:id', (req, res) => {
     });
 });
 
+// Mount other routes
+app.use('/api', serviceRoutes);
+app.use('/api', locationRoutes);
+app.use('/api', resourceRoutes);
+app.use('/api', stripeRoutes);
+app.use('/api', notificationRoutes);
+app.use('/api', bookingRoutes);
 
-app.use('', serviceRoutes);
-app.use('', locationRoutes);
-app.use('',resourceRoutes);
-app.use('', stripeRoutes);
-app.use('', notificationRoutes);
-app.use('',bookingRoutes);
-app.listen(3001)
+// Test MySQL Connection
+connection.query('SELECT 1', (err) => {
+    if (err) {
+        console.error("Database connection failed:", err);
+        process.exit(1);
+    } else {
+        console.log("Database connection successful");
+    }
+});
+
+// Start the server
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
+// Error handling middleware (should be last)
+app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+});
