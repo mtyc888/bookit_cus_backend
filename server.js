@@ -17,7 +17,11 @@ app.use(cors({
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE']
 }));
-
+// For debug, prints each API called on the console
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
 // Middleware to parse JSON bodies
 app.use(express.json());
 
