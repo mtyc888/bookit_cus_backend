@@ -2,28 +2,31 @@ const hapioClient = require('../config/hapioClient');
 const connection = require('../connection');
 //get locations
 const getLocations = async (req, res) => {
-    try{
-        const { user_id } = req.params;
-        connection.query('SELECT * FROM locations WHERE user_id = ?',[user_id], (err, result) =>{
-            if(err){
-                console.error("Error fetching locations from database", err.message);
-                res.status(500).json({message:"Error fetching locations"})
-            }
-            console.log("locations successfully fetched", result)
-            res.json({ data: result })
-        })
+    try {
+        const { slug } = req.params;
+        console.log('Received slug:', slug);
+        // Simplified query using slug directly from locations table
+        const query = `SELECT * FROM locations WHERE slug = ?`;
 
-    }catch(error){
-        console.error("Error fetching locations", error.message);
-        //handle errors from Hapio API
-        if(error.message){
-            res.status(error.response.status).json(error.response.data);
-        }
-        else{
-            res.status(500).json({ error : "Internal sever error" })
-        }
+        connection.query(query, [slug], (err, result) => {
+            if (err) {
+                console.error("Error fetching locations from database:", err.message);
+                return res.status(500).json({ error: "Failed to fetch locations" });
+            }
+            console.log('Query result:', result);
+            console.log('SQL Query:', connection.format(query, [slug]));
+            if (result.length === 0) {
+                return res.status(404).json({ error: "No locations found for this business" });
+            }
+            console.log('Sending data:', { data: result });
+            // Send the results as JSON to the frontend
+            res.json({ data: result });
+        });
+    } catch (error) {
+        console.error("Error fetching locations:", error.message);
+        res.status(500).json({ error: "Failed to fetch locations" });
     }
-}
+};
 //get a location
 const getSpecificLocation = async (req, res) => {
     try{

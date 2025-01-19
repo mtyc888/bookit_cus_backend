@@ -7,7 +7,7 @@ Core booking features:
   - View available time slots (done)
   - Cancel/reschedule appointments (done)
   - Email Confirmation (done)
-  - Basic reminder system [24h before]
+  - Basic reminder system [24h before] 
 
   (Business side)
   - Business hours setup

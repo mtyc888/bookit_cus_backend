@@ -9,8 +9,9 @@ dayjs.extend(timezone);
 //Get all resources
 const getResource = async(req, res) =>{
     try{
-        const { user_id } = req.params;
-        connection.query('SELECT * FROM resources WHERE user_id = ?', [user_id], (err, result) => {
+        const { slug } = req.params;
+        console.log('Received slug:', slug);
+        connection.query('SELECT * FROM resources WHERE slug = ?', [slug], (err, result) => {
             if(err){
                 console.error("Error fetching resources from mysql", err.message);
                 res.status(500).json({message:"error fetching resource from mysql"})

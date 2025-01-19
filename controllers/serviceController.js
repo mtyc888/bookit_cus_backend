@@ -122,20 +122,52 @@ const removeService = async (req, res) => {
 //Get all services
 const getAllService = async (req, res) => {
     try {
-        const user_id = req.params;
-        const query = `SELECT * FROM services WHERE user_id = ?`;
+        const { slug } = req.params;
+        
+        // First, get the user_id using the slug
+        const userQuery = `
+            SELECT user_id 
+            FROM users 
+            WHERE LOWER(slug) = LOWER(?)
+        `;
 
-        connection.query(query, [user_id], (err, result) => {
-            if (err) {
-                console.error("Error fetching services from database:", err.message);
-                return res.status(500).json({ error: "Failed to fetch services" });
+        connection.query(userQuery, [slug], (userErr, userResult) => {
+            if (userErr) {
+                console.error("Error fetching user:", userErr.message);
+                return res.status(500).json({ error: "Failed to fetch user" });
             }
-            // Send the filtered results as JSON to the frontend
-            res.json({ data: result });
+
+            if (userResult.length === 0) {
+                return res.status(404).json({ error: "Business not found" });
+            }
+
+            const userId = userResult[0].user_id;
+
+            // Then get services for this user_id
+            const serviceQuery = `
+                SELECT service_id, name, price, type, duration,
+                       bookable_interval, buffer_time_before, buffer_time_after,
+                       booking_window_start, booking_window_end, cancelation_threshold
+                FROM services 
+                WHERE user_id = ?
+            `;
+
+            connection.query(serviceQuery, [userId], (serviceErr, serviceResult) => {
+                if (serviceErr) {
+                    console.error("Error fetching services:", serviceErr.message);
+                    return res.status(500).json({ error: "Failed to fetch services" });
+                }
+
+                // Add some debug logging
+                console.log('User ID:', userId);
+                console.log('Services found:', serviceResult.length);
+                
+                res.json({ data: serviceResult });
+            });
         });
     } catch (error) {
         console.error("Error fetching data:", error.message);
-        res.status(500).json({ error: "Failed to fetch services from MySQL" });
+        res.status(500).json({ error: "Failed to fetch services" });
     }
 };
 
@@ -163,7 +195,7 @@ const assignResourceToService = async (req, res) => {
 // Get all bookable slots
 const getBookableSlots = async(req, res) =>{
     const { serviceId } = req.params;
-    const { from, to, location } = req.query;
+    let { from, to, location } = req.query;
 
     // Log raw values
     console.log('Raw from:', from);
