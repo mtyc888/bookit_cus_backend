@@ -15,41 +15,95 @@ const transporter = nodemailer.createTransport({
 });
 // Email templates
 const emailTemplates = {
-    booking: (data) =>({
-        subject: 'New Booking Confirmation',
+    booking: (data) => ({
+        subject: 'Booking Confirmation',
         html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-                <h2 style="color: #333;">Booking Confirmation</h2>
-                <p>Dear ${data.customerName},</p>
-                <p>Your booking has been confirmed for:</p>
-                <ul>
-                    <li>Date: ${data.date}</li>
-                    <li>Time: ${data.time}</li>
-                    <li>Service: ${data.service}</li>
-                    <li>Location: ${data.location}</li>
-                </ul>
-                <p>Looking forward to seeing you!</p>
+            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #333333; margin: 0;">Booking Confirmation</h1>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <p style="font-size: 16px; color: #333333;">Dear ${data.customer_name},</p>
+                    <p style="font-size: 16px; color: #333333;">Thank you for your booking. We're excited to confirm your appointment details below:</p>
+                </div>
+
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                    <h2 style="color: #333333; margin-top: 0; margin-bottom: 20px; font-size: 18px;">Booking Details</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Service:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">${data.service_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Location:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">${data.location_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Date & Time:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">${data.time}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Price:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">$${data.service_price}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <p style="font-size: 16px; color: #333333;">We're looking forward to seeing you!</p>
+                    <p style="font-size: 16px; color: #333333;">If you need to make any changes to your booking or have any questions, please don't hesitate to contact us.</p>
+                </div>
+
+                <div style="border-top: 1px solid #e9ecef; padding-top: 20px; text-align: center;">
+                    <p style="font-size: 14px; color: #6c757d; margin: 0;">This is an automated message, please do not reply to this email.</p>
+                </div>
             </div>
         `
     }),
-    reminder: (data) =>({
-        subject: 'Upcoming Appointment Reminder',
+    reminder: (data) => ({
+        subject: 'Appointment Reminder',
         html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">Appointment Reminder</h2>
-            <p>Dear ${data.customerName},</p>
-            <p>This is a friendly reminder of your upcoming appointment:</p>
-            <ul>
-                <li>Date: ${data.date}</li>
-                <li>Time: ${data.time}</li>
-                <li>Service: ${data.service}</li>
-                <li>Location: ${data.location}</li>
-            </ul>
-            <p>We look forward to seeing you!</p>
-        </div> 
+            <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="color: #333333; margin: 0;">Appointment Reminder</h1>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <p style="font-size: 16px; color: #333333;">Dear ${data.customer_name},</p>
+                    <p style="font-size: 16px; color: #333333;">This is a friendly reminder of your upcoming appointment:</p>
+                </div>
+
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                    <h2 style="color: #333333; margin-top: 0; margin-bottom: 20px; font-size: 18px;">Appointment Details</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Service:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">${data.service_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Location:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">${data.location_name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 8px 0; color: #666666;">Time:</td>
+                            <td style="padding: 8px 0; color: #333333; font-weight: 500;">${data.time}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <p style="font-size: 16px; color: #333333;">We look forward to seeing you then!</p>
+                    <p style="font-size: 16px; color: #333333;">If you need to reschedule or have any questions, please contact us as soon as possible.</p>
+                </div>
+
+                <div style="border-top: 1px solid #e9ecef; padding-top: 20px; text-align: center;">
+                    <p style="font-size: 14px; color: #6c757d; margin: 0;">This is an automated message, please do not reply to this email.</p>
+                </div>
+            </div>
         `
     })
-}
+};
 /**
  * Send email notification
  * @param {Object} options -Email options 
@@ -58,41 +112,52 @@ const emailTemplates = {
  * @param {Object} options.data - Data to populate the template
  * @param {string} [options.from] - Optional sender name
  */
-async function sendMail(req, res){
-    try{
-        const {to, template, data, from} = req.body;
-        //validate the incoming data
-        if(!to || !template || !data || !from){
-            return res.status(400).json({message:"missing data"})
+async function sendMail(req, res) {
+    try {
+        const { to, template, data, from } = req.body;
+
+        // Validate required fields
+        if (!to || !template || !data || !from) {
+            return res.status(400).json({ 
+                message: "missing data" 
+            });
         }
-        //validate if template exists
-        if(!emailTemplates[template]){
-            return res.status(400).json({message:"template does not exists"})
+
+        // Validate if template exists
+        if (!emailTemplates[template]) {
+            return res.status(400).json({ 
+                message: "template does not exist" 
+            });
         }
-        //generate email content from template
+
+        // Generate email content from template
         const templateContent = emailTemplates[template](data);
+
+        // Configure email options
         const mailOptions = {
             from: {
-                name: from || "Bookit Notification",
-                address: process.env.EMAIL_USER
+                name: "Booking System",
+                address: from
             },
             to: Array.isArray(to) ? to : [to],
             subject: templateContent.subject,
             html: templateContent.html
         };
 
-        //verify transporter connection
-        await transporter.verify()
-
-        //send email
+        // Send email
         await transporter.sendMail(mailOptions);
-        console.log("Email send successfully")
+        console.log("Email sent successfully to:", to);
 
-        res.status(200).json({message:"Email send successfully"})
+        res.status(200).json({ 
+            message: "Email sent successfully" 
+        });
 
-    }catch(error) {
-        console.error('Error sending WhatsApp message:', error.response?.data || error.message);
-        res.status(500).json({ error: error.response?.data || error.message });
+    } catch (error) {
+        console.error('Error sending email:', error);
+        res.status(500).json({ 
+            error: "Failed to send email",
+            details: error.message 
+        });
     }
 }
 
