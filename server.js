@@ -14,9 +14,13 @@ require('dotenv').config();
 
 // CORS configuration
 app.use(cors({
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE']
-}));
+    origin: [
+      'https://master.d2syh14nci1air.amplifyapp.com',  // Your Amplify domain
+      'http://localhost:3000'  // For local development
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  }));
 
 // Request logger middleware
 app.use((req, res, next) => {
