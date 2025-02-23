@@ -8,7 +8,7 @@ const resourceRoutes = require('./routes/resourceRouter.js');
 const stripeRoutes = require('./routes/stripeRouter.js');
 const notificationRoutes = require('./routes/notificationRoutes.js');
 const bookingRoutes = require('./routes/bookingRoutes.js');
-
+const authRoutes = require('./routes/authRoutes.js')
 // Load the .env file
 require('dotenv').config();
 
@@ -114,7 +114,7 @@ app.use('/api', resourceRoutes);
 app.use('/api', stripeRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api', bookingRoutes);
-
+app.use('/api/auth', authRoutes);
 // Test MySQL Connection
 connection.query('SELECT 1', (err) => {
     if (err) {
