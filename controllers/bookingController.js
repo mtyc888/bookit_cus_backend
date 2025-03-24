@@ -140,34 +140,58 @@ const createBooking = async (req, res) => {
     }
 };
 
-//get all bookings
+// Get bookings for a specific user
 const getBooking = async (req, res) => {
     try {
-        const { to,from } = req.params;
-        const response = await hapioClient.get('bookings', {
-            params: {
-                page: 1,
-                per_page: 100,
-                from,
-                to,
-            },
-        });
+        const { to, from, user_id } = req.query; // Add user_id from query params
+        console.log('Received user_id:', user_id); // Add this log to confirm
 
-        // Log full response for debugging
-        console.log(response.data);
+        // Base query to fetch bookings and join with users table
+        let query = `
+            SELECT a.appointment_id AS id, a.user_id, u.name, a.appointment_date, a.appointment_time, a.appointment_time_end, a.status, a.payment_status,
+                   a.service_id, a.resource_id, a.location_id, a.customer_name, a.customer_email, a.customer_phone, a.created_at, a.updated_at,
+                   u.email, u.password, u.slug
+            FROM appointments a
+            JOIN users u ON a.user_id = u.user_id
+        `;
 
-        res.send(response.data); // Send response to client
-    } catch (error) {
-        console.error('Error getting bookings:', error.message);
+        // Add conditions
+        const queryParams = [];
+        let conditions = [];
 
-        if (error.response) {
-            return res.status(error.response.status).json(error.response.data);
+        if (user_id) {
+            conditions.push(`a.user_id = ?`);
+            queryParams.push(user_id);
         } else {
-            return res.status(500).json({ error: 'Internal server error' });
+            console.log('No user_id provided, fetching all bookings'); // Log if user_id is missing
         }
+
+        if (from && to) {
+            conditions.push(`a.appointment_date BETWEEN ? AND ?`); // Use appointment_date instead of date
+            queryParams.push(from, to);
+        }
+
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
+        }
+
+        console.log('Executing query:', query, 'with params:', queryParams); // Log the query and params
+
+        // Execute the query
+        connection.query(query, queryParams, (err, results) => {
+            if (err) {
+                console.error('Error fetching bookings from MySQL:', err.message);
+                return res.status(500).json({ error: 'Database error' });
+            }
+
+            console.log('Fetched bookings:', results);
+            res.json(results);
+        });
+    } catch (error) {
+        console.error('Error in getBooking:', error.message);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 //retrieve a booking
 const getSpecificBooking = async(req, res) =>{
     try{

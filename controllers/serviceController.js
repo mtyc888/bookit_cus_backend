@@ -24,8 +24,31 @@ const createService = async (req, res) => {
             cancelation_threshold,
             metadata,
             protected_metadata,
-            enabled
+            enabled,
+            user_id 
         } = req.body;
+
+        console.log('Creating service with data:', {
+            name,
+            price,
+            type,
+            duration,
+            bookable_interval,
+            buffer_time_before,
+            buffer_time_after,
+            booking_window_start,
+            booking_window_end,
+            cancelation_threshold,
+            metadata,
+            protected_metadata,
+            enabled,
+            user_id
+        });
+
+        // Validate user_id
+        if (!user_id) {
+            return res.status(400).json({ message: "user_id is required" });
+        }
 
         // Send POST request to the Hapio API
         const response = await hapioClient.post('services', {
@@ -45,24 +68,26 @@ const createService = async (req, res) => {
         });
 
         const { 
-            id:service_id,
-            created_at: created_at,
-            updated_at: updated_at, 
+            id: service_id,
+            created_at,
+            updated_at, 
         } = response.data;
 
-        //create service entry in mysql
-        connection.query('INSERT INTO services (service_id, name, price, type, duration, created_at, updated_at, bookable_interval, buffer_time_before, buffer_time_after, booking_window_start, booking_window_end, cancelation_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [service_id, name, price, type, duration, created_at, updated_at, bookable_interval,buffer_time_before, buffer_time_after, booking_window_start, booking_window_end, cancelation_threshold],
+        // Create service entry in MySQL with user_id
+        connection.query(
+            'INSERT INTO services (service_id, user_id, name, price, type, duration, created_at, updated_at, bookable_interval, buffer_time_before, buffer_time_after, booking_window_start, booking_window_end, cancelation_threshold) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [service_id, user_id, name, price, type, duration, created_at, updated_at, bookable_interval, buffer_time_before, buffer_time_after, booking_window_start, booking_window_end, cancelation_threshold],
             (err, result) => {
-                if(err){
+                if (err) {
                     console.log("Error inserting service into services table:", err.message);
-                    res.status(500).json({ message: "Database insertion fail" })
+                    return res.status(500).json({ message: "Database insertion fail" });
                 }
                 console.log('Service entry successfully inserted into database:', result);
                 res.status(201).json({
                     message: "Service insertion successful",
                     service: {
                         service_id, 
+                        user_id,
                         name,
                         price,
                         type,
@@ -70,14 +95,13 @@ const createService = async (req, res) => {
                         created_at,
                         updated_at
                     }
-                })
+                });
             }
-        )
+        );
     } catch (error) {
         console.error('Error creating service:', error.message);
-
-        // Handle errors from the Hapio API
         if (error.response) {
+            console.error('Hapio API error details:', error.response.data);
             res.status(error.response.status).json(error.response.data);
         } else {
             res.status(500).json({ error: 'Internal server error' });
@@ -119,31 +143,75 @@ const removeService = async (req, res) => {
     }
 };
 
-//Get all services
+// Get all services for a specific user_id
 const getAllService = async (req, res) => {
     try {
-        const { slug } = req.params;
-        
-        // First, get the user_id using the slug
+        const { user_id } = req.query; // Get user_id from query params
+        console.log('Received user_id:', user_id);
+
+        if (!user_id) {
+            console.log('No user_id provided');
+            return res.status(400).json({ error: 'user_id is required' });
+        }
+
+        // Query to fetch services for the given user_id
+        const serviceQuery = `
+            SELECT service_id, name, price, type, duration,
+                   bookable_interval, buffer_time_before, buffer_time_after,
+                   booking_window_start, booking_window_end, cancelation_threshold
+            FROM services 
+            WHERE user_id = ?
+        `;
+
+        connection.query(serviceQuery, [user_id], (serviceErr, serviceResult) => {
+            if (serviceErr) {
+                console.error("Error fetching services:", serviceErr.message);
+                return res.status(500).json({ error: "Failed to fetch services" });
+            }
+
+            console.log('User ID:', user_id);
+            console.log('Services found:', serviceResult.length);
+            console.log('Services:', serviceResult);
+
+            res.json({ data: serviceResult });
+        });
+    } catch (error) {
+        console.error("Error fetching data:", error.message);
+        res.status(500).json({ error: "Failed to fetch services" });
+    }
+};
+const getAllServiceBySlug = async (req, res) => {
+    try {
+        const { slug } = req.params; // Get slug from URL params
+        console.log('Received slug:', slug);
+
+        if (!slug) {
+            console.log('No slug provided');
+            return res.status(400).json({ error: 'slug is required' });
+        }
+
+        // Step 1: Query the users table to find the user_id for the given slug
         const userQuery = `
             SELECT user_id 
             FROM users 
-            WHERE LOWER(slug) = LOWER(?)
+            WHERE slug = ?
         `;
 
         connection.query(userQuery, [slug], (userErr, userResult) => {
             if (userErr) {
-                console.error("Error fetching user:", userErr.message);
-                return res.status(500).json({ error: "Failed to fetch user" });
+                console.error("Error fetching user by slug:", userErr.message);
+                return res.status(500).json({ error: "Failed to fetch user by slug" });
             }
 
             if (userResult.length === 0) {
-                return res.status(404).json({ error: "Business not found" });
+                console.log('No user found for slug:', slug);
+                return res.status(404).json({ error: 'User not found for the given slug' });
             }
 
-            const userId = userResult[0].user_id;
+            const user_id = userResult[0].user_id;
+            console.log('Found user_id:', user_id);
 
-            // Then get services for this user_id
+            // Step 2: Query to fetch services for the given user_id
             const serviceQuery = `
                 SELECT service_id, name, price, type, duration,
                        bookable_interval, buffer_time_before, buffer_time_after,
@@ -152,16 +220,16 @@ const getAllService = async (req, res) => {
                 WHERE user_id = ?
             `;
 
-            connection.query(serviceQuery, [userId], (serviceErr, serviceResult) => {
+            connection.query(serviceQuery, [user_id], (serviceErr, serviceResult) => {
                 if (serviceErr) {
                     console.error("Error fetching services:", serviceErr.message);
                     return res.status(500).json({ error: "Failed to fetch services" });
                 }
 
-                // Add some debug logging
-                console.log('User ID:', userId);
+                console.log('User ID:', user_id);
                 console.log('Services found:', serviceResult.length);
-                
+                console.log('Services:', serviceResult);
+
                 res.json({ data: serviceResult });
             });
         });
@@ -170,7 +238,6 @@ const getAllService = async (req, res) => {
         res.status(500).json({ error: "Failed to fetch services" });
     }
 };
-
 //PUT Route to associate resource (practitioner) with service
 const assignResourceToService = async (req, res) => {
     //Extract IDs from URL parameters
@@ -265,5 +332,6 @@ module.exports = {
     getAllService,
     assignResourceToService,
     getBookableSlots,
-    removeService
+    removeService,
+    getAllServiceBySlug
 };

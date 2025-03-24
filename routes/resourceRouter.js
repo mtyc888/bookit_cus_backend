@@ -10,7 +10,7 @@ const {
     removeResource
 } = require('../controllers/resourceController');
 
-router.get('/resources/:slug', getResource);
+router.get('/resources', getResource);
 router.get('/resources/:resourceId/schedule-blocks', getResourceScheduleBlocks);
 router.post('/resources/:resourceId/recurring-schedules', createRecurringScheduleForResource);
 router.post('/resources/:resourceId/recurring-schedules/:recurringScheduleId/schedule-blocks', createScheduleBlockForRecurringSchdule);

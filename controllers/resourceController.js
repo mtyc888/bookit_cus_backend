@@ -6,24 +6,29 @@ const timezone = require('dayjs/plugin/timezone');
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-//Get all resources
-const getResource = async(req, res) =>{
-    try{
-        const { slug } = req.params;
-        console.log('Received slug:', slug);
-        connection.query('SELECT * FROM resources WHERE slug = ?', [slug], (err, result) => {
-            if(err){
-                console.error("Error fetching resources from mysql", err.message);
-                res.status(500).json({message:"error fetching resource from mysql"})
+// Get all resources for a user
+const getResource = async (req, res) => {
+    try {
+        const { user_id } = req.query; // Change from req.params.slug to req.query.user_id
+        console.log('Received user_id:', user_id);
+
+        if (!user_id) {
+            return res.status(400).json({ message: "user_id is required" });
+        }
+
+        connection.query('SELECT * FROM resources WHERE user_id = ?', [user_id], (err, result) => {
+            if (err) {
+                console.error("Error fetching resources from MySQL:", err.message);
+                return res.status(500).json({ message: "Error fetching resources from MySQL" });
             }
-            console.log("Successful fetching resources", result);
-            res.json({data:result});
-        })
-    } catch(error){
-        console.error("Error fetching data", error.message)
-        res.status(500).json({ error : "Failed to fetch hapio data" })
+            console.log("Successfully fetched resources:", result);
+            res.json({ data: result });
+        });
+    } catch (error) {
+        console.error("Error fetching data:", error.message);
+        res.status(500).json({ error: "Failed to fetch resources" });
     }
-}
+};
 
 // Retrieve a list of schedule blocks
 const getResourceScheduleBlocks = async (req, res) => {
